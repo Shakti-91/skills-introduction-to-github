@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat App</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+      padding: 1rem;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      color: #e94560;
+    }
+
+    /* ── Landing ─────────────────────────────────────── */
+    #landing {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: #e94560; color: #fff; }
+    .btn-primary:hover { background: #c73652; }
+    .btn-secondary { background: #0f3460; color: #fff; }
+    .btn-secondary:hover { background: #0a2744; }
+    .btn-send { background: #e94560; color: #fff; padding: 0.6rem 1.2rem; flex: none; }
+    .btn-send:hover { background: #c73652; }
+
+    /* ── Form panels ─────────────────────────────────── */
+    .panel {
+      display: none;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .panel.active { display: flex; }
+
+    .panel label {
+      font-size: 0.85rem;
+      color: #a0aec0;
+      margin-bottom: 0.15rem;
+      display: block;
+    }
+
+    .panel input {
+      width: 100%;
+      padding: 0.65rem 0.9rem;
+      border-radius: 8px;
+      border: 1px solid #0f3460;
+      background: #0f3460;
+      color: #e0e0e0;
+      font-size: 1rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+    .panel input:focus { border-color: #e94560; }
+
+    .panel .btn { margin-top: 0.5rem; }
+
+    .back-link {
+      text-align: center;
+      color: #a0aec0;
+      font-size: 0.85rem;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      text-decoration: underline;
+    }
+    .back-link:hover { color: #e94560; }
+
+    #error-msg {
+      color: #fc8181;
+      font-size: 0.875rem;
+      text-align: center;
+      min-height: 1.2em;
+    }
+
+    /* ── Chat ─────────────────────────────────────────── */
+    #chat {
+      display: none;
+      flex-direction: column;
+      height: 90vh;
+      background: #16213e;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    #chat-header {
+      background: #0f3460;
+      padding: 0.9rem 1.2rem;
+      font-weight: 700;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    #chat-header span { color: #e94560; }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .msg {
+      max-width: 75%;
+      padding: 0.55rem 0.9rem;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .msg.mine {
+      align-self: flex-end;
+      background: #e94560;
+      color: #fff;
+      border-bottom-right-radius: 3px;
+    }
+
+    .msg.theirs {
+      align-self: flex-start;
+      background: #0f3460;
+      color: #e0e0e0;
+      border-bottom-left-radius: 3px;
+    }
+
+    .msg .meta {
+      font-size: 0.72rem;
+      opacity: 0.75;
+      margin-bottom: 0.2rem;
+    }
+
+    .msg.system-msg {
+      align-self: center;
+      background: transparent;
+      color: #a0aec0;
+      font-size: 0.8rem;
+      font-style: italic;
+      padding: 0.2rem;
+    }
+
+    #input-area {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      background: #0f3460;
+    }
+
+    #msg-input {
+      flex: 1;
+      padding: 0.6rem 0.9rem;
+      border-radius: 8px;
+      border: 1px solid #1a1a2e;
+      background: #16213e;
+      color: #e0e0e0;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    #msg-input:focus { border-color: #e94560; }
+  </style>
+</head>
+<body>
+
+<!-- ── Landing / Auth screen ─────────────────────────────── -->
+<div class="container" id="landing-container">
+  <div id="landing">
+    <h1>💬 Chat App</h1>
+
+    <!-- Choice buttons -->
+    <div class="btn-group" id="choice-buttons">
+      <button class="btn btn-primary" onclick="showPanel('create-panel')">Create Room</button>
+      <button class="btn btn-secondary" onclick="showPanel('join-panel')">Join Room</button>
+    </div>
+
+    <!-- Create panel -->
+    <div class="panel" id="create-panel">
+      <div>
+        <label for="create-room-id">Room ID (1 – 9999)</label>
+        <input type="number" id="create-room-id" min="1" max="9999" placeholder="e.g. 4242" />
+      </div>
+      <div>
+        <label for="create-username">Your Name</label>
+        <input type="text" id="create-username" placeholder="Enter your name" />
+      </div>
+      <button class="btn btn-primary" onclick="createRoom()">Create &amp; Enter</button>
+      <div class="back-link" onclick="showPanel(null)">← Back</div>
+    </div>
+
+    <!-- Join panel -->
+    <div class="panel" id="join-panel">
+      <div>
+        <label for="join-room-id">Room ID (1 – 9999)</label>
+        <input type="number" id="join-room-id" min="1" max="9999" placeholder="e.g. 4242" />
+      </div>
+      <div>
+        <label for="join-username">Your Name</label>
+        <input type="text" id="join-username" placeholder="Enter your name" />
+      </div>
+      <button class="btn btn-secondary" onclick="joinRoom()">Join Room</button>
+      <div class="back-link" onclick="showPanel(null)">← Back</div>
+    </div>
+
+    <p id="error-msg"></p>
+  </div>
+</div>
+
+<!-- ── Chat screen ────────────────────────────────────────── -->
+<div class="container" id="chat-container" style="max-width:600px; display:none;">
+  <div id="chat">
+    <div id="chat-header">
+      <span id="room-label">Room #–</span>
+      <small id="user-label"></small>
+    </div>
+    <div id="messages"></div>
+    <div id="input-area">
+      <input type="text" id="msg-input" placeholder="Type a message…" onkeydown="onKey(event)" />
+      <button class="btn btn-send" onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let ws = null;
+  let myUsername = '';
+  let myRoomId = null;
+
+  // ── UI helpers ─────────────────────────────────────────────────────────────
+  function showPanel(id) {
+    document.getElementById('create-panel').classList.remove('active');
+    document.getElementById('join-panel').classList.remove('active');
+    clearError();
+    if (id) document.getElementById(id).classList.add('active');
+  }
+
+  function showError(msg) {
+    document.getElementById('error-msg').textContent = msg;
+  }
+
+  function clearError() {
+    document.getElementById('error-msg').textContent = '';
+  }
+
+  function switchToChat(roomId, username) {
+    document.getElementById('landing-container').style.display = 'none';
+    document.getElementById('chat-container').style.display = 'block';
+    document.getElementById('chat').style.display = 'flex';
+    document.getElementById('room-label').textContent = `Room #${roomId}`;
+    document.getElementById('user-label').textContent = username;
+  }
+
+  function addMessage(type, sender, text, timestamp) {
+    const box = document.getElementById('messages');
+    const div = document.createElement('div');
+
+    if (type === 'system') {
+      div.className = 'msg system-msg';
+      div.textContent = text;
+    } else {
+      const isMine = sender === myUsername;
+      div.className = `msg ${isMine ? 'mine' : 'theirs'}`;
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      const time = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+      meta.textContent = isMine ? time : `${sender}  ${time}`;
+      div.appendChild(meta);
+      const body = document.createElement('div');
+      body.textContent = text;
+      div.appendChild(body);
+    }
+
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  // ── Validate room ID ───────────────────────────────────────────────────────
+  function validateRoomId(raw) {
+    const id = parseInt(raw, 10);
+    if (!Number.isInteger(id) || id < 1 || id > 9999) return null;
+    return id;
+  }
+
+  // ── Create room ────────────────────────────────────────────────────────────
+  async function createRoom() {
+    clearError();
+    const rawId = document.getElementById('create-room-id').value;
+    const username = document.getElementById('create-username').value.trim();
+
+    const roomId = validateRoomId(rawId);
+    if (!roomId) { showError('Room ID must be a number between 1 and 9999.'); return; }
+    if (!username) { showError('Please enter your name.'); return; }
+
+    try {
+      const res = await fetch('/api/rooms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId })
+      });
+      const data = await res.json();
+      if (!res.ok) { showError(data.error || 'Failed to create room.'); return; }
+
+      myUsername = username;
+      myRoomId = roomId;
+      connectWebSocket(roomId, username);
+    } catch {
+      showError('Server error. Please try again.');
+    }
+  }
+
+  // ── Join room ──────────────────────────────────────────────────────────────
+  async function joinRoom() {
+    clearError();
+    const rawId = document.getElementById('join-room-id').value;
+    const username = document.getElementById('join-username').value.trim();
+
+    const roomId = validateRoomId(rawId);
+    if (!roomId) { showError('Room ID must be a number between 1 and 9999.'); return; }
+    if (!username) { showError('Please enter your name.'); return; }
+
+    try {
+      const res = await fetch(`/api/rooms/${roomId}`);
+      const data = await res.json();
+      if (!res.ok || !data.exists) { showError('Room not found. Please check the Room ID.'); return; }
+
+      myUsername = username;
+      myRoomId = roomId;
+      connectWebSocket(roomId, username);
+    } catch {
+      showError('Server error. Please try again.');
+    }
+  }
+
+  // ── WebSocket ──────────────────────────────────────────────────────────────
+  function connectWebSocket(roomId, username) {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}`);
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'join', roomId, username }));
+    };
+
+    ws.onmessage = (event) => {
+      let msg;
+      try { msg = JSON.parse(event.data); } catch { return; }
+
+      switch (msg.type) {
+        case 'joined':
+          switchToChat(roomId, username);
+          break;
+        case 'message':
+          addMessage('message', msg.sender, msg.text, msg.timestamp);
+          break;
+        case 'system':
+          addMessage('system', null, msg.message, null);
+          break;
+        case 'error':
+          if (document.getElementById('chat-container').style.display === 'none') {
+            showError(msg.message);
+            ws.close();
+          } else {
+            addMessage('system', null, `⚠️ ${msg.message}`, null);
+          }
+          break;
+      }
+    };
+
+    ws.onclose = () => {
+      addMessage('system', null, 'Disconnected from server.', null);
+    };
+  }
+
+  // ── Send message ───────────────────────────────────────────────────────────
+  function sendMessage() {
+    const input = document.getElementById('msg-input');
+    const text = input.value.trim();
+    if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'message', text }));
+    input.value = '';
+  }
+
+  function onKey(e) {
+    if (e.key === 'Enter') sendMessage();
+  }
+</script>
+</body>
+</html>
